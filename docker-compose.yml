@@ -1,0 +1,34 @@
+version: '3.8'  # Версия Docker Compose файла
+
+services:  # Определение сервисов
+  postgresdb:  # Сервис для PostgreSQL базы данных
+    image: postgres  # Используемое изображение (официальное изображение PostgreSQL)
+    restart: unless-stopped  # Перезапуск контейнера, если он остановился, кроме случаев, когда его останавливают вручную
+    env_file: ./.env  # Файл окружения, содержащий переменные
+    environment:  # Переменные окружения для контейнера
+      - POSTGRES_USER=$POSTGRESDB_USER  # Имя пользователя для PostgreSQL, берется из файла окружения
+      - POSTGRES_PASSWORD=$POSTGRESDB_ROOT_PASSWORD  # Пароль пользователя для PostgreSQL, берется из файла окружения
+      - POSTGRES_DB=$POSTGRESDB_DATABASE  # Имя базы данных для PostgreSQL, берется из файла окружения
+    ports:  # Проброс портов
+      - $POSTGRESDB_LOCAL_PORT:$POSTGRESDB_DOCKER_PORT  # Локальный порт:порт внутри контейнера, берется из файла окружения
+    volumes:  # Определение томов для хранения данных
+      - db:/var/lib/postgres  # Том, используемый для хранения данных PostgreSQL
+  app:  # Сервис для приложения
+    depends_on:  # Зависимости сервиса
+      - postgresdb  # Сначала должен быть запущен сервис postgresdb
+    build: ./server  # Сборка Docker образа из директории ./server
+    restart: unless-stopped  # Перезапуск контейнера, если он остановился, кроме случаев, когда его останавливают вручную
+    env_file: ./.env  # Файл окружения, содержащий переменные
+    ports:  # Проброс портов
+      - $NODE_LOCAL_PORT:$NODE_DOCKER_PORT  # Локальный порт:порт внутри контейнера, берется из файла окружения
+    environment:  # Переменные окружения для контейнера
+      - DB_HOST=postgresdb  # Хост базы данных, указывает на сервис postgresdb
+      - DB_USER=$POSTGRESDB_USER  # Имя пользователя для подключения к базе данных, берется из файла окружения
+      - DB_PASSWORD=$POSTGRESDB_ROOT_PASSWORD  # Пароль пользователя для подключения к базе данных, берется из файла окружения
+      - DB_NAME=$POSTGRESDB_DATABASE  # Имя базы данных для подключения, берется из файла окружения
+      - DB_PORT=$POSTGRESDB_DOCKER_PORT  # Порт для подключения к базе данных, берется из файла окружения
+    stdin_open: true  # Открытие stdin, чтобы контейнер оставался активным
+    tty: true  # Включение псевдотерминала для контейнера
+
+volumes: 
+  db:  # Определение тома db для хранения данных PostgreSQL
